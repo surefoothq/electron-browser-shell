@@ -450,6 +450,23 @@ export const injectExtensionAPIs = () => {
         },
       },
 
+      identity: {
+        factory: (base) => {
+          return {
+            ...base,
+            getRedirectURL: invokeExtension('identity.getRedirectURL', {
+              noop: true,
+              defaultResponse: '',
+            }),
+            getAuthToken: invokeExtension('identity.getAuthToken', { noop: true }),
+            launchWebAuthFlow: invokeExtension('identity.launchWebAuthFlow', { noop: true }),
+            removeCachedAuthToken: invokeExtension('identity.removeCachedAuthToken', {
+              noop: true,
+            }),
+          }
+        },
+      },
+
       notifications: {
         factory: (base) => {
           return {
