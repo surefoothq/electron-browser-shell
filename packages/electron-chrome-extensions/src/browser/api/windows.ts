@@ -113,9 +113,9 @@ export class WindowsAPI {
     /* Handle extension URLs */
     if (details.url) {
       if (Array.isArray(details.url)) {
-        details.url = details.url.map((url) => getExtensionUrl(event.extension, url)!)
+        details.url = details.url.map((url) => getExtensionUrl(event.extension, url) ?? url)
       } else {
-        details.url = getExtensionUrl(event.extension, details.url)!
+        details.url = getExtensionUrl(event.extension, details.url) ?? details.url
       }
     }
 
