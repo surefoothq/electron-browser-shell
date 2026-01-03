@@ -1,6 +1,7 @@
 import { ExtensionContext } from '../context'
 import { ExtensionEvent } from '../router'
 import debug from 'debug'
+import { getExtensionUrl } from './common'
 
 const d = debug('electron-chrome-extensions:windows')
 
@@ -109,6 +110,15 @@ export class WindowsAPI {
   }
 
   private async create(event: ExtensionEvent, details: chrome.windows.CreateData) {
+    /* Handle extension URLs */
+    if (details.url) {
+      if (Array.isArray(details.url)) {
+        details.url = details.url.map((url) => getExtensionUrl(event.extension, url)!)
+      } else {
+        details.url = getExtensionUrl(event.extension, details.url)!
+      }
+    }
+
     const win = await this.ctx.store.createWindow(event, details)
     return this.getWindowDetails(win)
   }
