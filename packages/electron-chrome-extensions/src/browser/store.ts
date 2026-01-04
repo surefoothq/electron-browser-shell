@@ -1,7 +1,8 @@
 import { BrowserWindow, webContents } from 'electron'
 import { EventEmitter } from 'node:events'
-import { ContextMenuType } from './api/common'
+
 import { ChromeExtensionImpl } from './impl'
+import { ContextMenuType } from './api/common'
 import { ExtensionEvent } from './router'
 
 export class ExtensionStore extends EventEmitter {
@@ -29,8 +30,51 @@ export class ExtensionStore extends EventEmitter {
 
   urlOverrides: Record<string, string> = {}
 
+  /** Currently active popup */
+  private activePopup?: { extensionId: string; view: any }
+
   constructor(public impl: ChromeExtensionImpl) {
     super()
+  }
+
+  getActivePopup() {
+    return this.activePopup
+  }
+
+  setActivePopup(extensionId: string, view: any) {
+    this.activePopup = { extensionId, view }
+  }
+
+  clearActivePopup() {
+    this.activePopup = undefined
+  }
+
+  async closePopup(extensionId: string, view: any): Promise<void> {
+    if (typeof this.impl.closePopup === 'function') {
+      await this.impl.closePopup(extensionId, view)
+    }
+  }
+
+  async openPopup(
+    extensionId: string,
+    url: string,
+    options: {
+      session: Electron.Session
+      parent: Electron.BaseWindow
+      anchorRect: { x: number; y: number; width: number; height: number }
+      alignment?: string
+    },
+  ): Promise<any> {
+    if (typeof this.impl.openPopup === 'function') {
+      const popup = await this.impl.openPopup(extensionId, url, options)
+      if (popup) {
+        this.setActivePopup(extensionId, popup)
+        return popup
+      }
+    }
+
+    // Default implementation - return undefined to signal caller to use default
+    return undefined
   }
 
   getWindowById(windowId: number) {

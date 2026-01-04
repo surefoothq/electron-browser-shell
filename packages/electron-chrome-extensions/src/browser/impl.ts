@@ -19,4 +19,25 @@ export interface ChromeExtensionImpl {
     extension: Electron.Extension,
     permissions: chrome.permissions.Permissions,
   ): Promise<boolean>
+
+  /**
+   * Open a browser action popup for an extension.
+   * Return the popup view/window instance, or undefined to use default implementation.
+   */
+  openPopup?(
+    extensionId: string,
+    url: string,
+    options: {
+      session: Electron.Session
+      parent: Electron.BaseWindow
+      anchorRect: { x: number; y: number; width: number; height: number }
+      alignment?: string
+    },
+  ): Promise<any> | any
+
+  /**
+   * Close a browser action popup that was created by the custom openPopup implementation.
+   * Only called for popups created by custom openPopup, not for default PopupView instances.
+   */
+  closePopup?(extensionId: string, view: any): Promise<void> | void
 }

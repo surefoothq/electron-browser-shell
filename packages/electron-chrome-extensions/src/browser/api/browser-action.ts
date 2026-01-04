@@ -1,16 +1,17 @@
-import { Menu, MenuItem, protocol, nativeImage, app } from 'electron'
-import { ExtensionContext } from '../context'
-import { PopupView } from '../popup'
-import { ExtensionEvent } from '../router'
-import {
-  getExtensionUrl,
-  getExtensionManifest,
-  getIconPath,
-  resolveExtensionPath,
-  matchSize,
-  ResizeType,
-} from './common'
 import debug from 'debug'
+import { Menu, MenuItem, app, nativeImage, protocol } from 'electron'
+
+import { ExtensionContext } from '../context'
+import { ExtensionEvent } from '../router'
+import { PopupView } from '../popup'
+import {
+  ResizeType,
+  getExtensionManifest,
+  getExtensionUrl,
+  getIconPath,
+  matchSize,
+  resolveExtensionPath,
+} from './common'
 
 const d = debug('electron-chrome-extensions:browserAction')
 
@@ -69,7 +70,6 @@ interface ExtensionActionStore extends Partial<ExtensionAction> {
 
 export class BrowserActionAPI {
   private actionMap = new Map</* extensionId */ string, ExtensionActionStore>()
-  private popup?: PopupView
 
   private observers: Set<Electron.WebContents> = new Set()
   private queuedUpdate: boolean = false
@@ -365,7 +365,7 @@ export class BrowserActionAPI {
     return { activeTabId: activeTab?.id, actions }
   }
 
-  private activate({ type, sender }: ExtensionEvent, details: ActivateDetails) {
+  private async activate({ type, sender }: ExtensionEvent, details: ActivateDetails) {
     if (type != 'frame') return
     const { eventType, extensionId, tabId } = details
 
@@ -375,7 +375,7 @@ export class BrowserActionAPI {
 
     switch (eventType) {
       case 'click':
-        this.activateClick(details)
+        await this.activateClick(details)
         break
       case 'contextmenu':
         this.activateContextMenu(details)
@@ -385,13 +385,26 @@ export class BrowserActionAPI {
     }
   }
 
-  private activateClick(details: ActivateDetails) {
+  private async activateClick(details: ActivateDetails) {
     const { extensionId, tabId, anchorRect, alignment } = details
 
-    if (this.popup) {
-      const toggleExtension = !this.popup.isDestroyed() && this.popup.extensionId === extensionId
-      this.popup.destroy()
-      this.popup = undefined
+    const activePopup = this.ctx.store.getActivePopup()
+    if (activePopup) {
+      const toggleExtension = activePopup.extensionId === extensionId
+      const view = activePopup.view
+
+      // Clear the active popup reference first
+      this.ctx.store.clearActivePopup()
+
+      // Destroy existing popup
+      if (view instanceof PopupView) {
+        // Handle PopupView instances directly
+        view.destroy()
+      } else {
+        // For custom implementations, delegate to store/impl
+        await this.ctx.store.closePopup(activePopup.extensionId, view)
+      }
+
       if (toggleExtension) {
         d('skipping activate to close popup')
         return
@@ -412,18 +425,30 @@ export class BrowserActionAPI {
         throw new Error('Unable to get BrowserWindow from active tab')
       }
 
-      this.popup = new PopupView({
-        extensionId,
+      // Try custom implementation first
+      let popup = await this.ctx.store.openPopup(extensionId, popupUrl, {
         session: this.ctx.session,
         parent: win,
-        url: popupUrl,
         anchorRect,
         alignment,
       })
 
+      // Fall back to default implementation
+      if (!popup) {
+        popup = new PopupView({
+          extensionId,
+          session: this.ctx.session,
+          parent: win,
+          url: popupUrl,
+          anchorRect,
+          alignment,
+        })
+        this.ctx.store.setActivePopup(extensionId, popup)
+      }
+
       d(`opened popup: ${popupUrl}`)
 
-      this.ctx.emit('browser-action-popup-created', this.popup)
+      this.ctx.emit('browser-action-popup-created', popup)
     } else {
       d(`dispatching onClicked for ${extensionId}`)
 
@@ -494,7 +519,7 @@ export class BrowserActionAPI {
     })
   }
 
-  private openPopup = (event: ExtensionEvent, options?: chrome.action.OpenPopupOptions) => {
+  private openPopup = async (event: ExtensionEvent, options?: chrome.action.OpenPopupOptions) => {
     const window =
       typeof options?.windowId === 'number'
         ? this.ctx.store.getWindowById(options.windowId)
@@ -510,7 +535,7 @@ export class BrowserActionAPI {
     const [width] = window.getSize()
     const anchorSize = 64
 
-    this.activateClick({
+    await this.activateClick({
       eventType: 'click',
       extensionId: event.extension.id,
       tabId: activeTab?.id,
