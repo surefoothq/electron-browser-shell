@@ -1,9 +1,14 @@
-import { ipcRenderer, contextBridge, webFrame } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 
-/**
- * Injects `<browser-action>` custom element into the current webpage.
- */
-export const injectBrowserAction = () => {
+interface ActivateDetails {
+  eventType: string
+  extensionId: string
+  tabId: number
+  anchorRect: { x: number; y: number; width: number; height: number }
+  alignment?: string
+}
+
+export const exposeBrowserActionIpc = () => {
   const actionMap = new Map<string, any>()
   const observerCounts = new Map<string, number>()
 
@@ -12,14 +17,6 @@ export const injectBrowserAction = () => {
 
   const invoke = <T>(name: string, partition: string, ...args: any[]): Promise<T> => {
     return ipcRenderer.invoke('crx-msg-remote', partition, name, ...args)
-  }
-
-  interface ActivateDetails {
-    eventType: string
-    extensionId: string
-    tabId: number
-    anchorRect: { x: number; y: number; width: number; height: number }
-    alignment?: string
   }
 
   const __browserAction__ = {
@@ -72,6 +69,19 @@ export const injectBrowserAction = () => {
       __browserAction__.getState(partition)
     }
   })
+
+  if (process.contextIsolated) {
+    contextBridge.exposeInMainWorld('browserAction', __browserAction__)
+  }
+
+  return __browserAction__
+}
+
+/**
+ * Injects `<browser-action>` custom element into the current webpage.
+ */
+export const injectBrowserAction = () => {
+  const __browserAction__ = exposeBrowserActionIpc()
 
   // Function body to run in the main world.
   // IMPORTANT: This must be self-contained, no closure variables can be used!
@@ -465,8 +475,6 @@ export const injectBrowserAction = () => {
   }
 
   if (process.contextIsolated) {
-    contextBridge.exposeInMainWorld('browserAction', __browserAction__)
-
     // Must execute script in main world to modify custom component registry.
     if ('executeInMainWorld' in contextBridge) {
       contextBridge.executeInMainWorld({
