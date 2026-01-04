@@ -1,4 +1,5 @@
-import { ipcRenderer, contextBridge, webFrame } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
+
 import { addExtensionListener, removeExtensionListener } from './event'
 
 export const injectExtensionAPIs = () => {
@@ -454,15 +455,22 @@ export const injectExtensionAPIs = () => {
         factory: (base) => {
           return {
             ...base,
-            getRedirectURL: invokeExtension('identity.getRedirectURL', {
+            getRedirectURL: (path?: string) => {
+              const url = path
+                ? `https://${extensionId}.chromiumapp.org/${path}`
+                : `https://${extensionId}.chromiumapp.org/`
+              return url
+            },
+            getAuthToken: invokeExtension('identity.getAuthToken'),
+            launchWebAuthFlow: invokeExtension('identity.launchWebAuthFlow'),
+            removeCachedAuthToken: invokeExtension('identity.removeCachedAuthToken'),
+            clearAllCachedAuthTokens: invokeExtension('identity.clearAllCachedAuthTokens'),
+            getAccounts: invokeExtension('identity.getAccounts', {
               noop: true,
-              defaultResponse: '',
+              defaultResponse: [],
             }),
-            getAuthToken: invokeExtension('identity.getAuthToken', { noop: true }),
-            launchWebAuthFlow: invokeExtension('identity.launchWebAuthFlow', { noop: true }),
-            removeCachedAuthToken: invokeExtension('identity.removeCachedAuthToken', {
-              noop: true,
-            }),
+            getProfileUserInfo: invokeExtension('identity.getProfileUserInfo'),
+            onSignInChanged: new ExtensionEvent('identity.onSignInChanged'),
           }
         },
       },
