@@ -261,15 +261,17 @@ class Browser {
     this.resolveReady()
   }
 
-  initSession() {
-    this.session = session.defaultSession
-
+  setUserAgent() {
     // Remove Electron and App details to closer emulate Chrome's UA
     const userAgent = this.session
       .getUserAgent()
       .replace(/\sElectron\/\S+/, '')
       .replace(new RegExp(`\\s${app.getName()}/\\S+`), '')
     this.session.setUserAgent(userAgent)
+  }
+
+  initSession() {
+    this.session = session.defaultSession
 
     this.session.serviceWorkers.on('running-status-changed', (event) => {
       console.info(`service worker ${event.versionId} ${event.runningStatus}`)
