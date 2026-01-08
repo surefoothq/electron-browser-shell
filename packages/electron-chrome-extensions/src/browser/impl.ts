@@ -1,3 +1,8 @@
+export interface ChromeExtensionPopupView {
+  destroy(): void
+  isDestroyed(): boolean
+}
+
 /** App-specific implementation details for extensions. */
 export interface ChromeExtensionImpl {
   createTab?(
@@ -33,11 +38,11 @@ export interface ChromeExtensionImpl {
       anchorRect: { x: number; y: number; width: number; height: number }
       alignment?: string
     },
-  ): Promise<any> | any
+  ): Promise<ChromeExtensionPopupView> | ChromeExtensionPopupView
 
   /**
    * Close a browser action popup that was created by the custom openPopup implementation.
    * Only called for popups created by custom openPopup, not for default PopupView instances.
    */
-  closePopup?(extensionId: string, view: any): Promise<void> | void
+  closePopup?(extensionId: string, view: ChromeExtensionPopupView): Promise<void> | void
 }

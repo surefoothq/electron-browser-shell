@@ -390,7 +390,8 @@ export class BrowserActionAPI {
 
     const activePopup = this.ctx.store.getActivePopup()
     if (activePopup) {
-      const toggleExtension = activePopup.extensionId === extensionId
+      const toggleExtension =
+        !activePopup.view.isDestroyed() && activePopup.extensionId === extensionId
       const view = activePopup.view
 
       // Clear the active popup reference first

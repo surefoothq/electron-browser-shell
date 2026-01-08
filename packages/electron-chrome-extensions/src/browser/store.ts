@@ -1,7 +1,7 @@
 import { BrowserWindow, webContents } from 'electron'
 import { EventEmitter } from 'node:events'
 
-import { ChromeExtensionImpl } from './impl'
+import { ChromeExtensionImpl, ChromeExtensionPopupView } from './impl'
 import { ContextMenuType } from './api/common'
 import { ExtensionEvent } from './router'
 
@@ -31,7 +31,10 @@ export class ExtensionStore extends EventEmitter {
   urlOverrides: Record<string, string> = {}
 
   /** Currently active popup */
-  private activePopup?: { extensionId: string; view: any }
+  private activePopup?: {
+    extensionId: string
+    view: ChromeExtensionPopupView
+  }
 
   constructor(public impl: ChromeExtensionImpl) {
     super()
@@ -41,7 +44,7 @@ export class ExtensionStore extends EventEmitter {
     return this.activePopup
   }
 
-  setActivePopup(extensionId: string, view: any) {
+  setActivePopup(extensionId: string, view: ChromeExtensionPopupView) {
     this.activePopup = { extensionId, view }
   }
 
@@ -49,7 +52,7 @@ export class ExtensionStore extends EventEmitter {
     this.activePopup = undefined
   }
 
-  async closePopup(extensionId: string, view: any): Promise<void> {
+  async closePopup(extensionId: string, view: ChromeExtensionPopupView): Promise<void> {
     if (typeof this.impl.closePopup === 'function') {
       await this.impl.closePopup(extensionId, view)
     }
@@ -64,7 +67,7 @@ export class ExtensionStore extends EventEmitter {
       anchorRect: { x: number; y: number; width: number; height: number }
       alignment?: string
     },
-  ): Promise<any> {
+  ): Promise<ChromeExtensionPopupView | undefined> {
     if (typeof this.impl.openPopup === 'function') {
       const popup = await this.impl.openPopup(extensionId, url, options)
       if (popup) {
