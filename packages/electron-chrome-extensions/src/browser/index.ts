@@ -1,25 +1,25 @@
-import { session as electronSession } from 'electron'
-import { EventEmitter } from 'node:events'
 import path from 'node:path'
-import { existsSync } from 'node:fs'
+import { EventEmitter } from 'node:events'
 import { createRequire } from 'node:module'
+import { session as electronSession } from 'electron'
+import { existsSync } from 'node:fs'
 
 import { BrowserActionAPI } from './api/browser-action'
-import { TabsAPI } from './api/tabs'
-import { WindowsAPI } from './api/windows'
-import { WebNavigationAPI } from './api/web-navigation'
-import { ExtensionStore } from './store'
-import { ContextMenusAPI } from './api/context-menus'
-import { RuntimeAPI } from './api/runtime'
-import { CookiesAPI } from './api/cookies'
-import { NotificationsAPI } from './api/notifications'
 import { ChromeExtensionImpl } from './impl'
 import { CommandsAPI } from './api/commands'
+import { ContextMenusAPI } from './api/context-menus'
+import { CookiesAPI } from './api/cookies'
 import { ExtensionContext } from './context'
 import { ExtensionRouter } from './router'
-import { checkLicense, License } from './license'
-import { readLoadedExtensionManifest } from './manifest'
+import { ExtensionStore } from './store'
+import { License, checkLicense } from './license'
+import { NotificationsAPI } from './api/notifications'
 import { PermissionsAPI } from './api/permissions'
+import { RuntimeAPI } from './api/runtime'
+import { TabsAPI } from './api/tabs'
+import { WebNavigationAPI } from './api/web-navigation'
+import { WindowsAPI } from './api/windows'
+import { readLoadedExtensionManifest } from './manifest'
 import { resolvePartition } from './partition'
 
 function checkVersion() {
@@ -218,6 +218,11 @@ export class ElectronChromeExtensions extends EventEmitter {
         'Invalid WebContents argument. Its session must match the session provided to ElectronChromeExtensions constructor options.',
       )
     }
+  }
+
+  /** Add window */
+  addWindow(window: Electron.BaseWindow) {
+    this.ctx.store.addWindow(window)
   }
 
   /** Add webContents to be tracked as a tab. */
