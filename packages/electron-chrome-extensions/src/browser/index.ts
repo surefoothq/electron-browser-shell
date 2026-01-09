@@ -245,6 +245,13 @@ export class ElectronChromeExtensions extends EventEmitter {
     }
   }
 
+  /** Focus window */
+  focusWindow(window: Electron.BaseWindow) {
+    if (this.ctx.store.windows.has(window)) {
+      this.api.windows.onFocusChanged(window.id)
+    }
+  }
+
   /**
    * Add webContents to be tracked as an extension host which will receive
    * extension events when a chrome-extension:// resource is loaded.
