@@ -147,8 +147,8 @@ export class ElectronChromeExtensions extends EventEmitter {
 
     sessionMap.set(session, this)
 
-    const router = new ExtensionRouter(session)
     const store = new ExtensionStore(impl)
+    const router = new ExtensionRouter(session, store)
 
     this.ctx = {
       emit: this.emit.bind(this),

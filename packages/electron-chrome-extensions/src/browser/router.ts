@@ -1,6 +1,7 @@
-import { app, ipcMain, Session } from 'electron'
 import debug from 'debug'
+import { Session, app, ipcMain } from 'electron'
 
+import { ExtensionStore } from './store'
 import { resolvePartition } from './partition'
 
 // Shorten base64 encoded icons
@@ -64,6 +65,7 @@ class RoutingDelegate {
   private constructor() {
     ipcMain.handle('crx-msg', this.onRouterMessage)
     ipcMain.handle('crx-msg-remote', this.onRemoteMessage)
+    ipcMain.on('crx-log', this.onLog)
     ipcMain.on('crx-add-listener', this.onAddListener)
     ipcMain.on('crx-remove-listener', this.onRemoveListener)
   }
@@ -88,6 +90,7 @@ class RoutingDelegate {
         this.workers.add(serviceWorker)
         serviceWorker.ipc.handle('crx-msg', this.onRouterMessage)
         serviceWorker.ipc.handle('crx-msg-remote', this.onRemoteMessage)
+        serviceWorker.ipc.on('crx-log', this.onLog)
         serviceWorker.ipc.on('crx-add-listener', this.onAddListener)
         serviceWorker.ipc.on('crx-remove-listener', this.onRemoveListener)
       }
@@ -124,6 +127,19 @@ class RoutingDelegate {
     const observer = this.sessionMap.get(ses)
 
     return observer?.onExtensionMessage(event, undefined, handlerName, ...args)
+  }
+
+  private onLog = (
+    event: IpcAnyEvent,
+    extensionId: string,
+    data: {
+      type: 'call' | 'get' | 'result'
+      path: string
+      args: string
+    },
+  ) => {
+    // TODO
+    ipcMain.emit('crx-log-message', event, extensionId, data)
   }
 
   private onAddListener = (event: IpcAnyEvent, extensionId: string, eventName: string) => {
@@ -232,6 +248,7 @@ export class ExtensionRouter {
 
   constructor(
     public session: Electron.Session,
+    private store: ExtensionStore,
     private delegate: RoutingDelegate = RoutingDelegate.get(),
   ) {
     this.delegate.addObserver(this)

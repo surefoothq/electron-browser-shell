@@ -39,7 +39,10 @@
   "author": "Samuel Maddock <sam@samuelmaddock.com>",
   "license": "SEE LICENSE IN LICENSE.md",
   "dependencies": {
-    "debug": "^4.3.1"
+    "@types/serialize-javascript": "^5.0.4",
+    "debug": "^4.3.1",
+    "serialize-javascript": "^7.0.2",
+    "telejson": "^8.0.0"
   },
   "devDependencies": {
     "@types/chai": "^4.2.14",

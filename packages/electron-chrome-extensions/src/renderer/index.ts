@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webFrame } from 'electron'
+import { stringify } from 'telejson'
 
 import { addExtensionListener, removeExtensionListener } from './event'
 
@@ -42,6 +43,7 @@ export const injectExtensionAPIs = () => {
     }
 
     if (process.env.NODE_ENV === 'development') {
+      log(extensionId, 'result', fnName, result)
       console.log(fnName, '(result)', result)
     }
 
@@ -82,7 +84,17 @@ export const injectExtensionAPIs = () => {
     invokeExtension(extensionId, 'runtime.disconnectNative', {}, connectionId)
   }
 
+  const log = (
+    extensionId: string,
+    type: 'call' | 'get' | 'result',
+    path: string,
+    args?: any[],
+  ) => {
+    ipcRenderer.send('crx-log', extensionId, { type, path, args: stringify(args) })
+  }
+
   const electronContext = {
+    log,
     invokeExtension,
     addExtensionListener,
     removeExtensionListener,
@@ -686,7 +698,41 @@ export const injectExtensionAPIs = () => {
     // Remove access to internals
     delete (globalThis as any).electron
 
-    Object.freeze(chrome)
+    const originalChrome = globalThis.chrome || {}
+
+    function createSpy<T extends Record<string, any>>(target: T, path: string[] = []): T {
+      return new Proxy(target, {
+        get(obj, prop) {
+          const currentPath = [...path, prop].join('.')
+
+          // Ignore internal JS symbols
+          if (typeof prop === 'symbol') return Reflect.get(obj, prop)
+
+          const value = obj[prop]
+
+          // If the value is an object (and not null), wrap it in a proxy too
+          if (value !== null && typeof value === 'object') {
+            return createSpy(value, [...path, prop])
+          }
+
+          // If it's a function, wrap it to log the call
+          if (typeof value === 'function') {
+            return (...args: any[]) => {
+              electron.log(extensionId, 'call', currentPath, args)
+              return value.apply(obj, args)
+            }
+          }
+
+          electron.log(extensionId, 'get', currentPath)
+
+          // If it's a primitive (string, number, undefined), just return it
+          return value
+        },
+      })
+    }
+    ;(globalThis as any).chrome = createSpy(originalChrome)
+
+    // Object.freeze(chrome)
 
     void 0 // no return
   }
