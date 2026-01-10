@@ -118,9 +118,9 @@ export class ElectronChromeExtensions extends EventEmitter {
     })
   }
 
-  private ctx: ExtensionContext
+  ctx: ExtensionContext
 
-  private api: {
+  api: {
     browserAction: BrowserActionAPI
     contextMenus: ContextMenusAPI
     commands: CommandsAPI
@@ -225,6 +225,23 @@ export class ElectronChromeExtensions extends EventEmitter {
     this.ctx.store.addWindow(window)
   }
 
+  /** Focus window */
+  focusWindow(window: Electron.BaseWindow) {
+    if (this.ctx.store.windows.has(window)) {
+      this.api.windows.onFocusChanged(window.id)
+    }
+  }
+
+  /** Get current window */
+  getCurrentWindow() {
+    return this.ctx.store.getCurrentWindow()
+  }
+
+  /** Remove window */
+  removeWindow(window: Electron.BaseWindow) {
+    this.ctx.store.removeWindow(window)
+  }
+
   /** Add webContents to be tracked as a tab. */
   addTab(tab: Electron.WebContents, window: Electron.BaseWindow) {
     this.checkWebContentsArgument(tab)
@@ -242,13 +259,6 @@ export class ElectronChromeExtensions extends EventEmitter {
     this.checkWebContentsArgument(tab)
     if (this.ctx.store.tabs.has(tab)) {
       this.api.tabs.onActivated(tab.id)
-    }
-  }
-
-  /** Focus window */
-  focusWindow(window: Electron.BaseWindow) {
-    if (this.ctx.store.windows.has(window)) {
-      this.api.windows.onFocusChanged(window.id)
     }
   }
 
